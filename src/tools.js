@@ -3,7 +3,6 @@ import { cookieStatus } from './cookies.js';
 import { instagram, linkedin, jobs } from './upstream.js';
 import * as ig from './instagram/service.js';
 import { scrape, listModules } from './social/snscrape.js';
-import { lokerFeed } from './social/loker.js';
 
 // Satu sumber definisi tool. Dipakai oleh:
 //  - MCP server (/mcp) untuk klien eksternal (Claude Desktop, Cursor, dll.)
@@ -119,16 +118,6 @@ export const TOOLS = [
       since: z.string().optional().describe('ISO 8601, hanya hasil lebih baru'),
     },
     handler: (args) => scrape(args),
-  },
-  {
-    name: 'loker_feed',
-    title: 'Feed loker',
-    description: 'Postingan lowongan kerja terbaru dari sumber loker yang sudah dikonfigurasi, disaring dengan kata kunci.',
-    shape: {
-      keywords: z.string().optional().describe('Kata kunci dipisah koma. Kosong = default (loker, lowongan, hiring, ...)'),
-      limit: z.number().int().min(1).max(200).optional(),
-    },
-    handler: (args) => lokerFeed(args),
   },
   {
     name: 'instagram_location_posts',

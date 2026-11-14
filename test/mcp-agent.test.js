@@ -73,7 +73,6 @@ test('agent bisa connect dan melihat semua tool', async () => {
       'instagram_session',
       'jobs_search',
       'linkedin_get',
-      'loker_feed',
       'social_modules',
       'social_scrape',
     ]);

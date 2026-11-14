@@ -106,7 +106,7 @@ export default function DashboardPage() {
             <Link href="/jobs/" className="hover:bg-accent flex items-center gap-3 rounded-md border px-3 py-2 text-sm transition-colors">
               <BriefcaseBusiness className="size-4" /> <span className="flex-1">Search LinkedIn jobs</span> →
             </Link>
-            <Link href="/instagram/" className="hover:bg-accent flex items-center gap-3 rounded-md border px-3 py-2 text-sm transition-colors">
+            <Link href="/instagram-public/" className="hover:bg-accent flex items-center gap-3 rounded-md border px-3 py-2 text-sm transition-colors">
               <Camera className="size-4" /> <span className="flex-1">Fetch Instagram metadata</span> →
             </Link>
             <Link href="/docs/" className="hover:bg-accent flex items-center gap-3 rounded-md border px-3 py-2 text-sm transition-colors">

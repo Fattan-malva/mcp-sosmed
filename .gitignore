@@ -12,3 +12,6 @@ cookies.json
 
 # Skrip redeploy lokal (VPS-only)
 .restart.sh
+
+# Artefak build TypeScript
+*.tsbuildinfo

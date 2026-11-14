@@ -19,10 +19,8 @@ writeFileSync(
 chmodSync(fakePython, 0o755);
 process.env.PYTHON_BIN = fakePython;
 process.env.SOCIAL_MIN_INTERVAL_MS = '2000';
-process.env.LOKER_SOURCES_FILE = path.join(dir, 'loker-sources.json');
 
 const { scrape, validateScrape, MODULES, SocialError } = await import('../src/social/snscrape.js');
-const loker = await import('../src/social/loker.js');
 
 test('modul X/Twitter tidak tersedia', () => {
   assert.equal(Object.keys(MODULES).some((m) => m.startsWith('twitter')), false);
@@ -50,19 +48,4 @@ test('scrape membaca JSONL dari proses snscrape', async () => {
   assert.equal(result.items.length, 2);
   assert.equal(result.items[0].url, 'https://example.test/1');
   assert.equal(result.warning, null);
-});
-
-test('sumber loker disimpan lalu feed menyaring kata kunci', async () => {
-  const src = await loker.addSource({ name: 'Info Loker', module: 'telegram-channel', target: 'infoloker' });
-  assert.equal(loker.listSources().length, 1);
-  const feed = await loker.lokerFeed({ limit: 10 });
-  assert.equal(feed.data.length, 1);
-  assert.equal(feed.data[0].url, 'https://example.test/1');
-  assert.equal(feed.data[0].source.id, src.id);
-  await loker.removeSource(src.id);
-  assert.equal(loker.listSources().length, 0);
-});
-
-test('sumber dengan modul tidak dikenal ditolak', () => {
-  assert.throws(() => loker.addSource({ name: 'x', module: 'twitter-user', target: 'x' }), { code: 'MODULE_NOT_ALLOWED' });
 });

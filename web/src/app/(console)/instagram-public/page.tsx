@@ -12,8 +12,8 @@ export default function InstagramPublicPage() {
   return (
     <div className="grid gap-4">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Instagram Publik</h1>
-        <p className="text-muted-foreground text-sm">Postingan publik akun, hashtag, dan lokasi lewat snscrape (tanpa cookie). Untuk data akun login, pakai menu Instagram.</p>
+        <h1 className="text-2xl font-semibold tracking-tight">Instagram</h1>
+        <p className="text-muted-foreground text-sm">Postingan publik akun, hashtag, dan lokasi lewat snscrape (tanpa cookie).</p>
       </div>
       <SocialScrapePanel modules={modules} />
     </div>
