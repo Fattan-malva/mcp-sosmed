@@ -7,7 +7,7 @@ import { api, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
+import { CookieFields, toCookiePayload, type CookieRow } from "@/components/cookie-fields";
 
 interface Status {
   platform: string;
@@ -22,7 +22,13 @@ const errorText = (e: unknown) => (e instanceof ApiError || e instanceof Error ?
 /** Form cookie LinkedIn (li_at). Dipakai di halaman Jobs. Cookie tersimpan di cookies.json. */
 export function LinkedinSession() {
   const [status, setStatus] = React.useState<Status | null>(null);
-  const [draft, setDraft] = React.useState("");
+  const defaults = (): CookieRow[] => [
+    { name: "li_at", value: "" },
+    { name: "JSESSIONID", value: "" },
+  ];
+  const [rows, setRows] = React.useState<CookieRow[]>(defaults);
+  const payload = toCookiePayload(rows);
+  const hasRequired = payload.some((r) => r.name === "li_at");
   const [busy, setBusy] = React.useState(false);
 
   const load = React.useCallback(async () => {
@@ -44,9 +50,9 @@ export function LinkedinSession() {
       await api("/api/cookies/linkedin", {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ cookies: draft }),
+        body: JSON.stringify({ cookies: payload }),
       });
-      setDraft("");
+      setRows(defaults());
       toast.success("Cookie LinkedIn disimpan");
       load();
     } catch (e) {
@@ -77,22 +83,16 @@ export function LinkedinSession() {
           <Badge variant={status?.configured ? "secondary" : "outline"}>{status?.configured ? "Terisi" : "Belum diisi"}</Badge>
         </div>
         <CardDescription>
-          Opsional. Cookie <code className="font-mono">li_at</code> dipakai untuk pencarian dan metadata yang butuh login. Disimpan di cookies.json.
+          Opsional. Isi cookie satu per satu. <code className="font-mono">li_at</code> wajib. Disimpan di cookies.json.
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-3">
         {status?.cookieNames?.length ? (
           <p className="text-muted-foreground text-xs">Cookie tersimpan: {status.cookieNames.join(", ")}</p>
         ) : null}
-        <Textarea
-          rows={3}
-          className="font-mono text-xs"
-          placeholder="li_at=...; JSESSIONID=&quot;ajax:...&quot;"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-        />
+        <CookieFields rows={rows} onChange={setRows} required={["li_at"]} />
         <div className="flex flex-wrap gap-2">
-          <Button disabled={busy || !draft.trim()} onClick={save}>
+          <Button disabled={busy || !hasRequired} onClick={save}>
             {busy ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} Simpan
           </Button>
           <Button variant="outline" disabled={busy || !status?.configured} onClick={remove}>

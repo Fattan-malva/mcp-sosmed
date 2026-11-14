@@ -7,9 +7,8 @@ import { api, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
+import { CookieFields, toCookiePayload, type CookieRow } from "@/components/cookie-fields";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -44,7 +43,14 @@ function errorToast(e: unknown) {
 /* ---------- Session (cookie form) ---------- */
 
 function SessionPanel({ session, reload }: { session: Session | null; reload: () => void }) {
-  const [draft, setDraft] = React.useState("");
+  const igDefaults = (): CookieRow[] => [
+    { name: "sessionid", value: "" },
+    { name: "csrftoken", value: "" },
+    { name: "ds_user_id", value: "" },
+  ];
+  const [rows, setRows] = React.useState<CookieRow[]>(igDefaults);
+  const payload = toCookiePayload(rows);
+  const hasSession = payload.some((r) => r.name === "sessionid");
   const [busy, setBusy] = React.useState(false);
 
   const save = async () => {
@@ -53,9 +59,9 @@ function SessionPanel({ session, reload }: { session: Session | null; reload: ()
       await api("/api/cookies/instagram", {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ cookies: draft }),
+        body: JSON.stringify({ cookies: payload }),
       });
-      setDraft("");
+      setRows(igDefaults());
       toast.success("Cookie Instagram disimpan di cookies.json");
       reload();
     } catch (e) {
@@ -116,24 +122,13 @@ function SessionPanel({ session, reload }: { session: Session | null; reload: ()
         <CardHeader>
           <CardTitle className="text-base">Input cookie</CardTitle>
           <CardDescription>
-            Wajib ada <code className="font-mono">sessionid</code>. Bisa berupa header <code className="font-mono">name=value; ...</code> atau JSON array
-            hasil export browser. Gunakan akun sekunder.
+            Isi satu per satu: nama cookie dan nilainya. <code className="font-mono">sessionid</code> wajib. Gunakan akun sekunder.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3">
-          <div className="grid gap-1.5">
-            <Label htmlFor="ig-cookie">Cookie</Label>
-            <Textarea
-              id="ig-cookie"
-              rows={6}
-              className="font-mono text-xs"
-              placeholder="sessionid=...; csrftoken=...; ds_user_id=...; mid=..."
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-            />
-          </div>
+          <CookieFields rows={rows} onChange={setRows} required={["sessionid"]} />
           <div className="flex flex-wrap gap-2">
-            <Button disabled={busy || !draft.trim()} onClick={save}>
+            <Button disabled={busy || !hasSession} onClick={save}>
               {busy ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} Simpan
             </Button>
             <Button variant="outline" onClick={reload} disabled={busy}>
