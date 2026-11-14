@@ -1,0 +1,14 @@
+services:
+  mcp-sosmed:
+    build: .
+    container_name: mcp-sosmed
+    restart: unless-stopped
+    expose:
+      - "3000"
+    env_file:
+      - .env
+
+networks:
+  default:
+    name: app-network
+    external: true
