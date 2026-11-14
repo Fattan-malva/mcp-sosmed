@@ -3,6 +3,7 @@
 import * as React from "react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ThemeSwitch } from "@/components/theme-switch";
+import { AdminTokenButton } from "@/components/admin-token";
 
 export function SiteHeader() {
   return (
@@ -10,6 +11,7 @@ export function SiteHeader() {
       <SidebarTrigger className="-ml-1" />
       <div className="bg-border h-5 w-px shrink-0" aria-hidden />
       <div className="flex-1" />
+      <AdminTokenButton />
       <ThemeSwitch />
       <span className="text-muted-foreground hidden text-xs sm:block">Public API</span>
     </header>

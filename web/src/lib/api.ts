@@ -48,6 +48,9 @@ export async function api<T = unknown>(path: string, init?: RequestInit): Promis
     } catch {
       /* bukan JSON */
     }
+    if (res.status === 401) {
+      message = "Unauthorized: token admin belum diisi atau salah. Klik tombol token admin di header.";
+    }
     throw new ApiError(res.status, message, code);
   }
   return (await res.json()) as T;
