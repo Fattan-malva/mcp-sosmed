@@ -36,7 +36,7 @@ export default function CookiesPage() {
   const load = React.useCallback(async () => {
     try {
       const { data } = await api<{ data: Status[] }>("/api/cookies");
-      setStatuses(data);
+      setStatuses(data.filter((s) => s.platform === "linkedin"));
     } catch (e) {
       toast.error(errorText(e));
     }

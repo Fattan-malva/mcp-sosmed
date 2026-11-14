@@ -7,6 +7,7 @@ import { URL } from 'node:url';
 import { PLATFORMS, cookieStatus, setCookies, deleteCookies, ValidationError } from './cookies.js';
 import { jobs, instagram, linkedin, parseJobs } from './upstream.js';
 import { handleMcp } from './mcp.js';
+import { handleInstagramApi } from './instagram/routes.js';
 
 const PORT = Number(process.env.PORT || 3000);
 
@@ -98,6 +99,10 @@ const server = http.createServer(async (req, res) => {
       const auth = authorize(req);
       if (!auth.ok) return json(res, auth.status, { error: auth.error });
 
+      if (url.pathname.startsWith('/api/instagram/')) {
+        return json(res, 200, await handleInstagramApi(req.method, url.pathname, url.searchParams));
+      }
+
       if (url.pathname === '/api/cookies' && req.method === 'GET') return json(res, 200, { data: await cookieStatus() });
 
       const cookieRoute = url.pathname.match(/^\/api\/cookies\/([a-z]+)$/);
@@ -123,7 +128,7 @@ const server = http.createServer(async (req, res) => {
   } catch (error) {
     if (error instanceof SyntaxError) return json(res, 400, { error: 'Body JSON tidak valid' });
     // ValidationError &413 membawa status sendiri; error upstream dianggap 502.
-    return json(res, error.status ?? 502, { error: error.message });
+    return json(res, error.status ?? 502, { error: error.message, code: error.code ?? null, meta: error.meta ?? null });
   }
 });
 

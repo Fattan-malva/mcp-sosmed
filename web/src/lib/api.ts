@@ -4,9 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  code: string | null;
+  constructor(status: number, message: string, code: string | null = null) {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -38,13 +40,15 @@ export async function api<T = unknown>(path: string, init?: RequestInit): Promis
   const res = await fetch(path, { ...init, headers });
   if (!res.ok) {
     let message = `HTTP ${res.status}`;
+    let code: string | null = null;
     try {
       const body = await res.json();
       if (body?.error) message = String(body.error);
+      if (body?.code) code = String(body.code);
     } catch {
       /* bukan JSON */
     }
-    throw new ApiError(res.status, message);
+    throw new ApiError(res.status, message, code);
   }
   return (await res.json()) as T;
 }

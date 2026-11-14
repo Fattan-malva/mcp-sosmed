@@ -148,3 +148,11 @@ export async function getRequestHeaders(platform) {
   if (jsession) headers['csrf-token'] = jsession.replace(/"/g, '');
   return headers;
 }
+
+/** Entry cookie satu platform (untuk dipakai client upstream). Null jika belum ada. */
+export async function readCookieEntry(platform) {
+  assertPlatform(platform);
+  const store = await readStore();
+  const entry = store[platform];
+  return entry?.cookies?.length ? entry : null;
+}

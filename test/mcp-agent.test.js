@@ -59,7 +59,21 @@ test('agent bisa connect dan melihat semua tool', async () => {
   try {
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name).sort();
-    assert.deepEqual(names, ['cookies_status', 'instagram_get', 'jobs_search', 'linkedin_get']);
+    assert.deepEqual(names, [
+      'cookies_status',
+      'instagram_comments',
+      'instagram_followers',
+      'instagram_following',
+      'instagram_get',
+      'instagram_hashtag_posts',
+      'instagram_location_posts',
+      'instagram_post',
+      'instagram_profile',
+      'instagram_search',
+      'instagram_session',
+      'jobs_search',
+      'linkedin_get',
+    ]);
   } finally {
     await client.close();
   }
