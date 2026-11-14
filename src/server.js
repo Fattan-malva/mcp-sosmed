@@ -1,13 +1,15 @@
 import http from 'node:http';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, URL } from 'node:url';
 import { timingSafeEqual } from 'node:crypto';
-import { URL } from 'node:url';
-import { PLATFORMS, cookieStatus, setCookies, deleteCookies, ValidationError } from './cookies.js';
+import { PLATFORMS, cookieStatus, setCookies, deleteCookies } from './cookies.js';
 import { jobs, instagram, linkedin, parseJobs } from './upstream.js';
 import { handleMcp } from './mcp.js';
 import { handleInstagramApi } from './instagram/routes.js';
+import { listApiKeys, createApiKey, revokeApiKey, verifyApiKey } from './apikeys.js';
+import { chatWithTools, agentTools } from './agent.js';
+import { ValidationError } from './cookies.js';
 
 const PORT = Number(process.env.PORT || 3000);
 
@@ -35,7 +37,6 @@ function serveStatic(pathname, res) {
   if (!existsSync(file) && rel !== '/' && !path.extname(rel)) file = path.join(ROOT, rel, 'index.html');
   if (!existsSync(file)) return false;
   res.setHeader('content-type', TYPES[path.extname(file)] ?? 'application/octet-stream');
-  // Cache policy diatur nginx (vhost --no-cache), jangan kirim header kedua.
   createReadStream(file).pipe(res);
   return true;
 }
@@ -47,16 +48,36 @@ function json(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
-/** Cek token admin (ADMIN_TOKEN). Dipakai untuk /mcp, cookie, dan get dengan cookie. */
-function authorize(req) {
-  const expected = process.env.ADMIN_TOKEN || '';
-  if (!expected) return { ok: false, status: 503, error: 'ADMIN_TOKEN belum diatur di server' };
+function bearer(req) {
   const header = req.headers.authorization || '';
-  const provided = header.startsWith('Bearer ') ? header.slice(7) : String(req.headers['x-admin-token'] || '');
-  const a = Buffer.from(provided);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length || !timingSafeEqual(a, b)) return { ok: false, status: 401, error: 'Unauthorized' };
-  return { ok: true };
+  return header.startsWith('Bearer ') ? header.slice(7) : String(req.headers['x-admin-token'] || '');
+}
+
+const safeEqual = (a, b) => {
+  const x = Buffer.from(a);
+  const y = Buffer.from(b);
+  return x.length === y.length && timingSafeEqual(x, y);
+};
+
+/**
+ * Autentikasi:
+ *  - token admin (ADMIN_TOKEN): akses penuh (pengelolaan key, cookie, MCP, AI Test, data).
+ *  - API key msk_... aktif: HANYA untuk mengambil data hasil fetch Instagram/LinkedIn
+ *    (GET /api/instagram/*, /api/linkedin). Bukan untuk AI maupun MCP.
+ * adminOnly: endpoint yang hanya boleh dengan token admin.
+ */
+async function authorize(req, { adminOnly = false } = {}) {
+  const provided = bearer(req);
+  const adminToken = process.env.ADMIN_TOKEN || '';
+
+  if (!adminToken) return { ok: false, status: 503, error: 'ADMIN_TOKEN belum diatur di server' };
+  if (provided && safeEqual(provided, adminToken)) return { ok: true, role: 'admin' };
+
+  if (!adminOnly) {
+    const key = await verifyApiKey(provided);
+    if (key) return { ok: true, role: 'apikey', key };
+  }
+  return { ok: false, status: 401, error: 'Unauthorized' };
 }
 
 async function readBody(req, limit = 64 * 1024) {
@@ -69,6 +90,8 @@ async function readBody(req, limit = 64 * 1024) {
   }
   return Buffer.concat(chunks).toString('utf8');
 }
+
+const readJson = async (req, limit) => JSON.parse((await readBody(req, limit)) || '{}');
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
@@ -85,7 +108,7 @@ const server = http.createServer(async (req, res) => {
 
   try {
     if (url.pathname === '/mcp') {
-      const auth = authorize(req);
+      const auth = await authorize(req, { adminOnly: true });
       if (!auth.ok) return json(res, auth.status, { error: auth.error });
       const raw = req.method === 'POST' ? await readBody(req, 1024 * 1024) : '';
       const body = raw ? JSON.parse(raw) : undefined;
@@ -93,27 +116,64 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (url.pathname.startsWith('/api/')) {
-      // Jobs publik, tidak butuh cookie.
+      // Jobs publik, tidak butuh auth.
       if (url.pathname === '/api/jobs') return json(res, 200, { data: await jobs(Object.fromEntries(url.searchParams)) });
 
-      const auth = authorize(req);
+      // Pengelolaan API key: hanya token admin.
+      if (url.pathname === '/api/keys' || url.pathname.startsWith('/api/keys/')) {
+        const auth = await authorize(req, { adminOnly: true });
+        if (!auth.ok) return json(res, auth.status, { error: auth.error });
+
+        if (url.pathname === '/api/keys' && req.method === 'GET') return json(res, 200, { data: await listApiKeys() });
+        if (url.pathname === '/api/keys' && req.method === 'POST') {
+          const payload = await readJson(req);
+          return json(res, 201, { data: await createApiKey(payload.name) });
+        }
+        const keyId = url.pathname.match(/^\/api\/keys\/([\w-]+)$/);
+        if (keyId && req.method === 'DELETE') return json(res, 200, { data: await revokeApiKey(keyId[1]) });
+        return json(res, 404, { error: 'Not found' });
+      }
+
+      // AI Test: hanya token admin.
+      if (url.pathname.startsWith('/api/agent/')) {
+        const admin = await authorize(req, { adminOnly: true });
+        if (!admin.ok) return json(res, admin.status, { error: admin.error });
+        if (url.pathname === '/api/agent/tools' && req.method === 'GET') return json(res, 200, { data: agentTools() });
+        if (url.pathname === '/api/agent/chat' && req.method === 'POST') {
+          const payload = await readJson(req, 256 * 1024);
+          return json(res, 200, { data: await chatWithTools(payload) });
+        }
+        return json(res, 404, { error: 'Not found' });
+      }
+
+      // Data Instagram/LinkedIn: boleh token admin atau API key (read-only).
+      const auth = await authorize(req);
       if (!auth.ok) return json(res, auth.status, { error: auth.error });
 
       if (url.pathname.startsWith('/api/instagram/')) {
         return json(res, 200, await handleInstagramApi(req.method, url.pathname, url.searchParams));
       }
 
-      if (url.pathname === '/api/cookies' && req.method === 'GET') return json(res, 200, { data: await cookieStatus() });
+      // Cookie: baca dan tulis hanya token admin.
+      if (url.pathname === '/api/cookies' && req.method === 'GET') {
+        const admin = await authorize(req, { adminOnly: true });
+        if (!admin.ok) return json(res, admin.status, { error: admin.error });
+        return json(res, 200, { data: await cookieStatus() });
+      }
 
       const cookieRoute = url.pathname.match(/^\/api\/cookies\/([a-z]+)$/);
       if (cookieRoute) {
         const platform = cookieRoute[1];
         if (!Object.hasOwn(PLATFORMS, platform)) return json(res, 404, { error: 'Platform tidak dikenal' });
-        if (req.method === 'PUT') {
-          const payload = JSON.parse((await readBody(req)) || '{}');
-          return json(res, 200, { data: await setCookies(platform, payload.cookies) });
+        if (req.method === 'PUT' || req.method === 'DELETE') {
+          const admin = await authorize(req, { adminOnly: true });
+          if (!admin.ok) return json(res, admin.status, { error: admin.error });
+          if (req.method === 'PUT') {
+            const payload = await readJson(req);
+            return json(res, 200, { data: await setCookies(platform, payload.cookies) });
+          }
+          return json(res, 200, { data: await deleteCookies(platform) });
         }
-        if (req.method === 'DELETE') return json(res, 200, { data: await deleteCookies(platform) });
         return json(res, 405, { error: 'Method not allowed' });
       }
 
@@ -127,7 +187,8 @@ const server = http.createServer(async (req, res) => {
     return json(res, 404, { error: 'Not found' });
   } catch (error) {
     if (error instanceof SyntaxError) return json(res, 400, { error: 'Body JSON tidak valid' });
-    // ValidationError &413 membawa status sendiri; error upstream dianggap 502.
+    if (error instanceof ValidationError) return json(res, 400, { error: error.message, code: 'VALIDATION' });
+    // Error upstream dan error lain tanpa status dianggap 502/500.
     return json(res, error.status ?? 502, { error: error.message, code: error.code ?? null, meta: error.meta ?? null });
   }
 });

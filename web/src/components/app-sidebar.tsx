@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, BriefcaseBusiness, Camera, Gauge, KeyRound } from "lucide-react";
+import { BookOpen, BriefcaseBusiness, Bot, Camera, Gauge, KeyRound } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -30,7 +30,10 @@ const NAV_GROUPS = [
   },
   {
     label: "Settings",
-    items: [{ title: "Cookies", url: "/cookies", icon: KeyRound }],
+    items: [
+      { title: "API Keys", url: "/keys", icon: KeyRound },
+      { title: "AI Test", url: "/ai-test", icon: Bot },
+    ],
   },
   {
     label: "Docs",

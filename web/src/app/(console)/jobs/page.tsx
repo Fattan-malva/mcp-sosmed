@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { LinkedinSession } from "@/components/linkedin-session";
 
 interface Job {
   id: string;
@@ -48,6 +49,7 @@ export default function JobsPage() {
         <h1 className="text-2xl font-semibold tracking-tight">LinkedIn Jobs</h1>
         <p className="text-muted-foreground text-sm">Guest job search — no login, public postings only.</p>
       </div>
+      <LinkedinSession />
 
       <div className="grid items-start gap-4 xl:grid-cols-[340px_minmax(0,1fr)]">
         <Card>
