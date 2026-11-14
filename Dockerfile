@@ -12,9 +12,13 @@ RUN npx next build
 FROM node:20-alpine
 WORKDIR /app
 ENV NODE_ENV=production
+# Python untuk snscrape (vendor/snscrape). Dependensi dari paket Alpine, tanpa pip.
+RUN apk add --no-cache python3 py3-requests py3-lxml py3-beautifulsoup4
+ENV PYTHON_BIN=python3
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 COPY src ./src
+COPY vendor ./vendor
 COPY --from=webbuild /app/out ./web/out
 # cookies.json disimpan di /app/data (di-mount sebagai volume di compose)
 RUN mkdir -p /app/data

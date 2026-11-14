@@ -10,6 +10,8 @@ import { handleInstagramApi } from './instagram/routes.js';
 import { listApiKeys, createApiKey, revokeApiKey, verifyApiKey } from './apikeys.js';
 import { chatWithTools, agentTools } from './agent.js';
 import { ValidationError } from './cookies.js';
+import { MODULES, listModules, scrape, SocialError } from './social/snscrape.js';
+import { listSources, addSource, removeSource, lokerFeed } from './social/loker.js';
 
 const PORT = Number(process.env.PORT || 3000);
 
@@ -152,6 +154,30 @@ const server = http.createServer(async (req, res) => {
 
       if (url.pathname.startsWith('/api/instagram/')) {
         return json(res, 200, await handleInstagramApi(req.method, url.pathname, url.searchParams));
+      }
+
+      // snscrape (Instagram/Facebook/Mastodon publik, Telegram) dan sumber loker.
+      if (url.pathname.startsWith('/api/social/')) {
+        if (url.pathname.startsWith('/api/social/loker/sources') && (req.method === 'POST' || req.method === 'DELETE')) {
+          const admin = await authorize(req, { adminOnly: true });
+          if (!admin.ok) return json(res, admin.status, { error: admin.error });
+          if (req.method === 'POST') return json(res, 201, { data: await addSource(await readJson(req)) });
+          const sourceId = url.pathname.match(/^\/api\/social\/loker\/sources\/([\w-]+)$/);
+          if (sourceId) return json(res, 200, { data: await removeSource(sourceId[1]) });
+          return json(res, 404, { error: 'Not found' });
+        }
+        if (req.method !== 'GET') return json(res, 405, { error: 'Method not allowed' });
+        if (url.pathname === '/api/social/modules') return json(res, 200, { data: listModules() });
+        if (url.pathname === '/api/social/scrape') {
+          const q = url.searchParams;
+          return json(res, 200, { data: await scrape({ module: q.get('module'), target: q.get('target'), limit: q.get('limit') ?? undefined, since: q.get('since') || undefined }) });
+        }
+        if (url.pathname === '/api/social/loker/sources') return json(res, 200, { data: listSources() });
+        if (url.pathname === '/api/social/loker') {
+          const q = url.searchParams;
+          return json(res, 200, await lokerFeed({ keywords: q.get('keywords') || undefined, limit: q.get('limit') || undefined }));
+        }
+        return json(res, 404, { error: 'Not found' });
       }
 
       // Cookie: baca dan tulis hanya token admin.

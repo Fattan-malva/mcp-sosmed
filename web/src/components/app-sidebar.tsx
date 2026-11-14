@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, BriefcaseBusiness, Bot, Camera, Gauge, KeyRound } from "lucide-react";
+import { AtSign, BookOpen, BriefcaseBusiness, Bot, Camera, Gauge, KeyRound, Newspaper, Users } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -26,6 +26,10 @@ const NAV_GROUPS = [
       { title: "Dashboard", url: "/dashboard", icon: Gauge },
       { title: "LinkedIn Jobs", url: "/jobs", icon: BriefcaseBusiness },
       { title: "Instagram", url: "/instagram", icon: Camera },
+      { title: "Instagram Publik", url: "/instagram-public", icon: Camera },
+      { title: "Facebook", url: "/facebook", icon: Users },
+      { title: "Mastodon", url: "/mastodon", icon: AtSign },
+      { title: "Loker", url: "/loker", icon: Newspaper },
     ],
   },
   {

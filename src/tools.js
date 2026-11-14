@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { cookieStatus } from './cookies.js';
 import { instagram, linkedin, jobs } from './upstream.js';
 import * as ig from './instagram/service.js';
+import { scrape, listModules } from './social/snscrape.js';
+import { lokerFeed } from './social/loker.js';
 
 // Satu sumber definisi tool. Dipakai oleh:
 //  - MCP server (/mcp) untuk klien eksternal (Claude Desktop, Cursor, dll.)
@@ -98,6 +100,35 @@ export const TOOLS = [
     description: 'Postingan berdasarkan hashtag. tab: top atau recent.',
     shape: { tag: z.string(), tab: z.enum(['top', 'recent']).optional(), count, cursor },
     handler: (args) => ig.hashtagPosts(args),
+  },
+  {
+    name: 'social_modules',
+    title: 'Daftar modul snscrape',
+    description: 'Daftar modul publik snscrape yang tersedia (Instagram, Facebook, Mastodon, Telegram). X/Twitter tidak tersedia.',
+    shape: {},
+    handler: () => ({ data: listModules() }),
+  },
+  {
+    name: 'social_scrape',
+    title: 'Scrape publik (snscrape)',
+    description: 'Ambil postingan publik dari modul snscrape. module contoh: instagram-user, facebook-group, mastodon-profile, telegram-channel. Scrape dijalankan satu per satu dengan jeda minimum.',
+    shape: {
+      module: z.string().describe('Nama modul, lihat social_modules'),
+      target: z.string().describe('Username, hashtag, nama channel, atau URL sesuai modul'),
+      limit: z.number().int().min(1).max(200).optional(),
+      since: z.string().optional().describe('ISO 8601, hanya hasil lebih baru'),
+    },
+    handler: (args) => scrape(args),
+  },
+  {
+    name: 'loker_feed',
+    title: 'Feed loker',
+    description: 'Postingan lowongan kerja terbaru dari sumber loker yang sudah dikonfigurasi, disaring dengan kata kunci.',
+    shape: {
+      keywords: z.string().optional().describe('Kata kunci dipisah koma. Kosong = default (loker, lowongan, hiring, ...)'),
+      limit: z.number().int().min(1).max(200).optional(),
+    },
+    handler: (args) => lokerFeed(args),
   },
   {
     name: 'instagram_location_posts',
