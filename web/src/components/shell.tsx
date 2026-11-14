@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BriefcaseBusiness, Gauge, Camera, BookOpen, Menu, X } from "lucide-react";
+import { BriefcaseBusiness, Gauge, Camera, BookOpen, KeyRound, Menu, X } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeSwitch } from "@/components/theme-switch";
@@ -12,6 +12,7 @@ const items = [
   { title: "Dashboard", url: "/dashboard/", icon: Gauge },
   { title: "LinkedIn Jobs", url: "/jobs/", icon: BriefcaseBusiness },
   { title: "Instagram", url: "/instagram/", icon: Camera },
+  { title: "Cookies", url: "/cookies/", icon: KeyRound },
   { title: "API Docs", url: "/docs/", icon: BookOpen },
 ];
 

@@ -10,8 +10,32 @@ export class ApiError extends Error {
   }
 }
 
+export const TOKEN_KEY = "mcp-sosmed-token";
+
+/** Token admin disimpan di browser ini saja (localStorage). */
+export function getAdminToken(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    return window.localStorage.getItem(TOKEN_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+export function setAdminToken(token: string) {
+  try {
+    if (token) window.localStorage.setItem(TOKEN_KEY, token);
+    else window.localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    /* storage tidak tersedia */
+  }
+}
+
 export async function api<T = unknown>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, { ...init, headers: { ...(init?.headers ?? {}) } });
+  const headers: Record<string, string> = { ...((init?.headers as Record<string, string>) ?? {}) };
+  const token = getAdminToken();
+  if (token) headers.authorization = `Bearer ${token}`;
+  const res = await fetch(path, { ...init, headers });
   if (!res.ok) {
     let message = `HTTP ${res.status}`;
     try {

@@ -5,5 +5,10 @@ web/out
 web/next-env.d.ts
 .env
 
+# Cookie sesi & data runtime — JANGAN pernah di-commit
+data/
+cookies.json
+*.tmp
+
 # Skrip redeploy lokal (VPS-only)
 .restart.sh

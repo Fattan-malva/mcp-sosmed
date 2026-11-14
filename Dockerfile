@@ -12,8 +12,11 @@ RUN npx next build
 FROM node:20-alpine
 WORKDIR /app
 ENV NODE_ENV=production
-COPY package.json ./
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
 COPY src ./src
 COPY --from=webbuild /app/out ./web/out
+# cookies.json disimpan di /app/data (di-mount sebagai volume di compose)
+RUN mkdir -p /app/data
 EXPOSE 3000
 CMD ["node", "src/server.js"]

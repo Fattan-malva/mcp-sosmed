@@ -7,6 +7,9 @@ services:
       - "3000"
     env_file:
       - .env
+    # ADMIN_TOKEN wajib ada di .env (dipakai untuk /mcp dan menu Cookies)
+    volumes:
+      - ./data:/app/data
 
 networks:
   default:
